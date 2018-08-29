@@ -268,7 +268,7 @@ contract VoltToken is BasicToken, VoltOwned {
         setFreeze(to, freezeTimestamp); //our policy will be freeze all volt token. but freezeTimestamp not actually used. usually 0.
     }
 
-    function superMint(address to, uint256 value) public onlyOwner noFreeze {
+    function superMint(address to, uint256 value) public onlyOwner noFreeze canMint {
         uint256 rs = remainingSupply();
         require(rs >= value);
 
