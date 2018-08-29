@@ -1,52 +1,66 @@
+pragma solidity ^0.4.24;
+
 /**
  * @title SafeMath
- * @dev Math operations with safety checks that throw on error
+ * @dev Math operations with safety checks that revert on error
  */
 library SafeMath {
     /**
-    * @dev Multiplies two numbers, throws on overflow.
+    * @dev Multiplies two numbers, reverts on overflow.
     */
-    function mul(uint256 a, uint256 b) internal pure returns (uint256 c) {
-        if (a == 0) {
-            return 0;
-        }
-        c = a * b;
-        assert(c / a == b);
+    function mul(uint256 _a, uint256 _b) internal pure returns (uint256) {
+        if (_a == 0) return 0;
+        
+        uint256 c = _a * _b;
+        require(c / _a == _b);
+        
         return c;
     }
 
     /**
-    * @dev Integer division of two numbers, truncating the quotient.
+    * @dev Integer division of two numbers truncating the quotient, reverts on division by zero.
     */
-    function div(uint256 a, uint256 b) internal pure returns (uint256) {
-        // assert(b > 0); // Solidity automatically throws when dividing by 0
-        // uint256 c = a / b;
-        // assert(a == b * c + a % b); // There is no case in which this doesn't hold
-        return a / b;
+    function div(uint256 _a, uint256 _b) internal pure returns (uint256) {
+        require(_b > 0);
+        uint256 c = _a / _b;
+
+        return c;
     }
 
     /**
-    * @dev Subtracts two numbers, throws on overflow (i.e. if subtrahend is greater than minuend).
+    * @dev Subtracts two numbers, reverts on overflow (i.e. if subtrahend is greater than minuend).
     */
-    function sub(uint256 a, uint256 b) internal pure returns (uint256) {
-        assert(b <= a);
-        return a - b;
+    function sub(uint256 _a, uint256 _b) internal pure returns (uint256) {
+        require(_b <= _a);
+        uint256 c = _a - _b;
+
+        return c;
     }
 
     /**
-    * @dev Adds two numbers, throws on overflow.
+    * @dev Adds two numbers, reverts on overflow.
     */
-    function add(uint256 a, uint256 b) internal pure returns (uint256 c) {
-        c = a + b;
-        assert(c >= a);
-        return c;   
+    function add(uint256 _a, uint256 _b) internal pure returns (uint256) {
+        uint256 c = _a + _b;
+        require(c >= _a);
+
+        return c;
+    }
+
+    /**
+    * @dev Divides two numbers and returns the remainder (unsigned integer modulo),
+    * reverts when dividing by zero.
+    */
+    function mod(uint256 a, uint256 b) internal pure returns (uint256) {
+        require(b != 0);
+        return a % b;
     }
 }
 
 contract BasicToken {
     string private token_name;
     string private token_symbol;
-    uint256 private token_decimals;
+    uint8 private token_decimals;
 
     uint256 private total_supply;
     uint256 private remaining_supply;
@@ -57,10 +71,10 @@ contract BasicToken {
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approve(address indexed target, address indexed spender, uint256 value);
 
-    function BasicToken (
+    constructor ( 
         string tokenName,
         string tokenSymbol,
-        uint256 tokenDecimals,
+        uint8 tokenDecimals,
         uint256 tokenSupply
     ) public {
         token_name = tokenName;
@@ -120,7 +134,7 @@ contract BasicToken {
         require(spender_address != address(0));
 
         setApprove(msg.sender, spender_address, value);
-        Approve(msg.sender, spender_address, value);
+        emit Approve(msg.sender, spender_address, value);
         return true;
     }
     
@@ -132,36 +146,8 @@ contract BasicToken {
         require(value >= 0);
         require(msg.sender != address(0));
         require(spender_address != address(0));
-
+		
         allowance_of[target_address][spender_address] = value;
-        return true;
-    }
-
-    function changeTokenName(
-        string newTokenName
-    ) internal returns (bool) {
-        token_name = newTokenName;
-        return true;
-    }
-
-    function changeTokenSymbol(
-        string newTokenSymbol
-    ) internal returns (bool) {
-        token_symbol = newTokenSymbol;
-        return true;
-    }
-
-    function changeTokenDecimals(
-        uint256 newTokenDecimals
-    ) internal returns (bool) {
-        token_decimals = newTokenDecimals;
-        return true;
-    }
-
-    function changeTotalSupply(
-        uint256 newTotalSupply
-    ) internal returns (bool) {
-        total_supply = newTotalSupply;
         return true;
     }
 
@@ -190,7 +176,7 @@ contract VoltOwned {
         _;
     }
 
-    function VoltOwned(address firstOwner) public {
+    constructor(address firstOwner) public {
         voltOwners[firstOwner] = 99;
         ownerList.push(firstOwner);
     }
@@ -205,8 +191,9 @@ contract VoltOwned {
 
     function addOwner(address newVoltOwnerAddress) public onlyOwner noFreeze {
         require(newVoltOwnerAddress != address(0));
+        require(voltOwners[newVoltOwnerAddress] != 99); 
         voltOwners[newVoltOwnerAddress] = 99;
-        ownerList.push(newVoltOwnerAddress);
+        ownerList.push(newVoltOwnerAddress); 
     }
 
     function removeOwner(address removeVoltOwnerAddress) public onlyOwner noFreeze {
@@ -222,9 +209,7 @@ contract VoltOwned {
         }
     }
 
-    function getOwners() public onlyOwner noFreeze returns (address[]) {
-        return ownerList;
-    }
+    function getOwners() view onlyOwner noFreeze returns (address[]) { return ownerList; }
 
     function isFreeze(address who) internal view returns (bool) {
         if (now >= voltFreeze[who]) {
@@ -238,15 +223,12 @@ contract VoltOwned {
         address freezeAddress,
         uint256 timestamp
     ) public onlyOwner noFreeze returns (bool) {
-        require(freezeAddress != address(0));
+        if (freezeAddress == address(0)) return false;
         voltFreeze[freezeAddress] = timestamp;
+        return true;
     }
 
-    function getFreezeTimestamp(
-        address who
-    ) public onlyOwner noFreeze returns (uint256) {
-        return voltFreeze[who];
-    }
+    function getFreezeTimestamp(address who) view onlyOwner noFreeze returns (uint256) { return voltFreeze[who]; }        
 }
 
 contract VoltToken is BasicToken, VoltOwned {
@@ -258,7 +240,7 @@ contract VoltToken is BasicToken, VoltOwned {
     event Mint(address indexed to, uint256 value);
     event Burn(address indexed target, uint256 value);
 
-    function VoltToken () public BasicToken (
+    constructor() public BasicToken (
         "VOLT", "ACDC", 18, 4000000000
     ) VoltOwned(
         msg.sender
@@ -279,9 +261,9 @@ contract VoltToken is BasicToken, VoltOwned {
         uint256 ts = totalSupply();
         uint256 rs = remainingSupply();
         require(ts >= rs);
+        require(freezeTimestamp >= 0);
 
         superMint(to, value);
-        setFreeze(to, freezeTimestamp);
     }
 
     function superMint(address to, uint256 value) public onlyOwner noFreeze {
@@ -291,16 +273,9 @@ contract VoltToken is BasicToken, VoltOwned {
         uint256 currentBalance = balanceOf(to);
         setBalance(to, currentBalance.add(value));
         setRemainingSupply(rs.sub(value));
-        Transfer(0x0, to, value);
-        Mint(to, value);
+        emit Transfer(0x0, to, value);
+        emit Mint(to, value);
     }
-
-    function mintOpen() public onlyOwner noFreeze returns (bool) {
-        require(mintStatus == false);
-        mintStatus = true;
-        return true;
-    }
-
     function mintClose() public onlyOwner noFreeze returns (bool) {
         require(mintStatus == true);
         mintStatus = false;
@@ -352,36 +327,14 @@ contract VoltToken is BasicToken, VoltOwned {
         uint256 preBalance = balanceOf(from);
         setBalance(from, balanceOf(from).sub(value));
         setBalance(to, balanceOf(to).add(value));
-        Transfer(from, to, value);
+        emit Transfer(from, to, value);
         assert(balanceOf(from).add(value) == preBalance);
         return true;
     }
 
-    function setTokenName(
-        string newTokenName
-    ) public onlyOwner noFreeze returns (bool) {
-        return changeTokenName(newTokenName);
-    }
-
-    function setTokenSymbol(
-        string newTokenSymbol
-    ) public onlyOwner noFreeze returns (bool) {
-        return changeTokenSymbol(newTokenSymbol);
-    }
-
-    function setTotalSupply(
-        uint256 newTotalSupply
-    ) public onlyOwner noFreeze returns (bool) {
-        return changeTotalSupply(newTotalSupply);
-    }
-
     function setRemainingSupply(
         uint256 newRemainingSupply
-    ) public onlyOwner noFreeze returns (bool) {
-        return changeRemainingSupply(newRemainingSupply);
-    }
+    ) private onlyOwner noFreeze returns (bool) { return changeRemainingSupply(newRemainingSupply); }
 
-    function getRemainingSupply() public onlyOwner noFreeze returns (uint256) {
-        return remainingSupply();
-    }
+    function getRemainingSupply() view onlyOwner noFreeze returns (uint256) { return remainingSupply(); }
 }
