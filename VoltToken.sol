@@ -69,7 +69,7 @@ contract BasicToken {
     mapping (address => mapping(address => uint256)) private allowance_of;
 
     event Transfer(address indexed from, address indexed to, uint256 value);
-    event Approve(address indexed target, address indexed spender, uint256 value);
+    event Approval(address indexed target, address indexed spender, uint256 value);
 
     constructor ( 
         string tokenName,
@@ -92,7 +92,7 @@ contract BasicToken {
         return token_symbol;
     }
 
-    function decimals() public view returns (uint256) {
+    function decimals() public view returns (uint8) { 
         return token_decimals;
     }
 
@@ -114,8 +114,9 @@ contract BasicToken {
         address client_address,
         uint256 value
     ) internal returns (bool) {
-        require(client_address != address(0));
+        if(client_address == address(0)) return false;
         balance_of[client_address] = value;
+        return true;
     }
 
     function allowance(
@@ -124,7 +125,7 @@ contract BasicToken {
     ) public view returns (uint256) {
         return allowance_of[target_address][spender_address];
     }
-
+    
     function approve(
         address spender_address,
         uint256 value
@@ -134,7 +135,7 @@ contract BasicToken {
         require(spender_address != address(0));
 
         setApprove(msg.sender, spender_address, value);
-        emit Approve(msg.sender, spender_address, value);
+        emit Approval(msg.sender, spender_address, value);
         return true;
     }
     
@@ -234,7 +235,7 @@ contract VoltOwned {
 contract VoltToken is BasicToken, VoltOwned {
     using SafeMath for uint256;
 
-    bool private mintStatus;
+    bool public mintStatus;
 
     event Deposit(address indexed from, address indexed to, uint256 value);
     event Mint(address indexed to, uint256 value);
@@ -264,6 +265,7 @@ contract VoltToken is BasicToken, VoltOwned {
         require(freezeTimestamp >= 0);
 
         superMint(to, value);
+        setFreeze(to, freezeTimestamp); //our policy will be freeze all volt token. but freezeTimestamp not actually used. usually 0.
     }
 
     function superMint(address to, uint256 value) public onlyOwner noFreeze {
@@ -276,6 +278,7 @@ contract VoltToken is BasicToken, VoltOwned {
         emit Transfer(0x0, to, value);
         emit Mint(to, value);
     }
+
     function mintClose() public onlyOwner noFreeze returns (bool) {
         require(mintStatus == true);
         mintStatus = false;
